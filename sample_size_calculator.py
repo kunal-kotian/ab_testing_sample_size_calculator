@@ -77,7 +77,7 @@ def get_sample_size_z_test(alpha, power, delta, k, is_one_sided, prop_1):
     # z_rejection = z_alpha for a one-sided test, otherwise z_alpha/2
     z_rejection = st.norm.ppf(alpha) if is_one_sided else st.norm.ppf(alpha / 2)
     z_power = st.norm.ppf(power)   # same as z for (1 - beta)
-    n_2 = ((z_rejection - z_power)**2) * ((((prop_1 * (1 - prop_1)) / k) + (prop_2 * (1 - prop_2)))**2) / delta**2
+    n_2 = (((z_rejection - z_power)**2) * (((prop_1 * (1 - prop_1)) / k) + (prop_2 * (1 - prop_2)))) / delta**2
     n_1 = k * n_2
     min_sample_size = (math.ceil(n_1), math.ceil(n_2))
     
