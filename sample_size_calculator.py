@@ -159,8 +159,8 @@ def format_inputs_dict(x_var, param_vals):
             param_vals[param] = param_vals[param] * len(param_vals[x_var])
     return param_vals
 
-#  ------------------------------------------------------------------------
 
+#  ------------------------------------------------------------------------
 # Main code:
 
 param_vals = get_input()
@@ -184,11 +184,12 @@ n_1_all = [e[0] for e in min_sample_sizes]
 n_2_all = [e[1] for e in min_sample_sizes]
 
 # create the plot
+print('Sample size calculation completed.  Please see the generated plot.')
 plt.figure(figsize=(7, 7))
 plt.plot(param_vals[x_var], n_1_all, label='Condition 1', marker='o')
 plt.plot(param_vals[x_var], n_2_all, label='Condition 2', marker='o')
 plt.grid()
-plt.title("Test of", param_vals['test_of'])
+plt.title("Test of {}".format(param_vals['test_of'][0]))
 plt.xlabel(x_var)
 plt.ylabel('Minimum number of samples')
 plt.legend(loc='upper left')
