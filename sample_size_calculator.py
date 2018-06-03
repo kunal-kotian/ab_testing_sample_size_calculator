@@ -18,9 +18,17 @@ def get_input():
     params = ['alpha', 'power', 'delta']
     # param_vals format - key = parameter name, value = parameter value(s) in a list
     # e.g. {'alpha': [0.05], 'power': [0.5, 0.6, 0.7], 'delta': [5.7]}
+    
     param_vals = {}
     # identify the variable for which we need a range of values based on user input
     variable_param = int(input(prompt_param)) - 1
+    
+    variable_param_name = params[variable_param]
+    print('Specify a range of values for {} below...'.format(variable_param_name))
+    variable_param_min = float(input('Enter the minimum value of interest for {} : '.format(variable_param_name)))
+    variable_param_max = float(input('Enter the maximum value of interest for {}: '.format(variable_param_name)))
+    variable_param_vals = np.linspace(start=variable_param_min, stop=variable_param_max, num=100)
+    param_vals[variable_param_name] = list(variable_param_vals)
 
     for param_ind in range(len(params)):
         if param_ind != variable_param:
@@ -28,12 +36,6 @@ def get_input():
             prompt = 'Enter a single value for {}:  '.format(param_name)
             param_vals[param_name] = [float(input(prompt))]
 
-    variable_param_name = params[variable_param]
-    print('Specify a range of values for {} below...'.format(variable_param_name))
-    variable_param_min = float(input('Enter the minimum value of interest for {} : '.format(variable_param_name)))
-    variable_param_max = float(input('Enter the maximum value of interest for {}: '.format(variable_param_name)))
-    variable_param_vals = np.linspace(start=variable_param_min, stop=variable_param_max, num=1000)
-    param_vals[variable_param_name] = list(variable_param_vals)
 
     # Ask for other required inputs
     print('"k" is the no. of samples in condition 1 / no. of samples in condition 2, n1 = k*n2')
@@ -59,9 +61,73 @@ def get_input():
 
     return param_vals
 
+def get_sample_size_z_test(alpha, power, delta, k, is_one_sided, prop_1): 
+    """
+    alpha: significance level
+    power: minimum required power of the test
+    delta: minimum difference to be detected between the null and alternate parameter values
+    k: no. of samples in condition 1 / no. of samples in condition 2, n1 = k*n2
+        k = 1 when both conditions need to have equal no. of samples
+    is_one_sided: boolean indicator of whether a test is one-sided or two-sided
+    prop_1: proportion under null hypothesis, or for A/B testing:
+        probability that a unit in condition 1 performs the action of interest
+    """
+    prop_2 = prop_1 - delta
+    # z_rejection is the quantile for the rejection region
+    # z_rejection = z_alpha for a one-sided test, otherwise z_alpha/2
+    z_rejection = st.norm.ppf(alpha) if is_one_sided else st.norm.ppf(alpha / 2)
+    z_power = st.norm.ppf(power)   # same as z for (1 - beta)
+    n_2 = ((z_rejection - z_power)**2) * ((((prop_1 * (1 - prop_1)) / k) + (prop_2 * (1 - prop_2)))**2) / delta**2
+    n_1 = k * n_2
+    min_sample_size = (math.ceil(n_1), math.ceil(n_2))
+    
+    return min_sample_size
 
+
+def initial_sample_size(alpha, power, delta, k, is_one_sided): 
+    """Initial sample size based on normal distribution"""
+    # z_rejection is the quantile for the rejection region
+    z_rejection = st.norm.ppf(alpha) if is_one_sided else st.norm.ppf(alpha / 2)
+    z_power = st.norm.ppf(power)   # same as z for (1 - beta)
+    n_2 = ((z_rejection - z_power)**2) * (1/k + 1) / delta**2
+    n_1 = k * n_2
+    n = math.ceil(n_1)+math.ceil(n_2)            
+    return n
+              
+                        
+def get_sample_size_t_test(alpha, power, delta, k, is_one_sided, n_tmp=0): 
+    """
+    alpha: significance level
+    power: minimum required power of the test
+    delta: minimum difference to be detected between the null and alternate parameter values
+    k: no. of samples in condition 1 / no. of samples in condition 2, n1 = k*n2
+        k = 1 when both conditions need to have equal no. of samples
+    is_one_sided: boolean indicator of whether a test is one-sided or two-sided
+    """
+    if n_tmp == 0: 
+        n_tmp = initial_sample_size(alpha, power, delta, k, is_one_sided)
+    
+    # print("Initial N: ", n_tmp)
+    df = n_tmp - 2
+    t_rejection = st.t.ppf(alpha, df) if is_one_sided else st.t.ppf(alpha / 2, df)
+    t_power = st.t.ppf(power, df)   # same as z for (1 - beta)
+    n_2 = ((t_rejection - t_power)**2) * (1/k + 1) / delta**2
+    n_1 = k * n_2
+    n = math.ceil(n_1)+math.ceil(n_2)
+        
+    while abs(n - n_tmp) >= 1:
+        if abs(n - n_tmp) > 10: 
+            break
+        n_tmp = n_tmp + 1
+        n_1, n_2 = get_sample_size_t_test(alpha, power, delta, k, is_one_sided, n_tmp)
+        n = n_1 + n_2
+           
+    return math.ceil(n_1), math.ceil(n_2)
+    
+    
 def get_sample_size(test_of, alpha, power, delta, k, is_one_sided, prop_1):
-    """For a two-sample test of proportions, returns a tuple (n1, n2) 
+    """
+    For a two-sample test of proportions, returns a tuple (n1, n2) 
     of the minimum sample sizes required under conditions 1 and 2.
     test_of: one of 'means' or 'proportions'
     alpha: significance level
@@ -74,18 +140,10 @@ def get_sample_size(test_of, alpha, power, delta, k, is_one_sided, prop_1):
         probability that a unit in condition 1 performs the action of interest
     """
     if test_of == 'proportions':
-        prop_2 = prop_1 - delta
-        # z_rejection is the quantile for the rejection region
-        # z_rejection = z_alpha for a one-sided test, otherwise z_alpha/2
-        z_rejection = st.norm.ppf(alpha) if is_one_sided else st.norm.ppf(alpha / 2)
-        z_power = st.norm.ppf(power)   # same as z for (1 - beta)
-        n_2 = (((z_rejection - z_power)**2) * ((((prop_1 * (1 - prop_1)) / k) + (prop_2 * (1 - prop_2)))**2)) / delta**2
-        n_1 = k * n_2
-        min_sample_size = (math.ceil(n_1), math.ceil(n_2))
+        min_sample_size = get_sample_size_z_test(alpha, power, delta, k, is_one_sided, prop_1)
 
     elif test_of == 'means':
-        # TO DO - calculate no. of samples in the case of test of means
-        pass
+        min_sample_size = get_sample_size_t_test(alpha, power, delta, k, is_one_sided)
 
     return min_sample_size
 
@@ -113,20 +171,25 @@ x_var = str([var for var in ['alpha', 'power', 'delta'] if len(param_vals[var]) 
 param_vals = format_inputs_dict(x_var, param_vals)   # reformat param_vals
 min_sample_sizes = []
 
-for i in range(len(param_vals[x_var])):
+print("Calculating minimum required sample size...")
+num_vars = len(param_vals[x_var])
+for i in range(num_vars):
     inputs = {var:param_vals[var][i] for var in param_vals}
     n_1, n_2 = get_sample_size(**inputs)
     min_sample_sizes.append((n_1, n_2))
+    if (i % 10 == 0 or i == num_vars-1) and i != 0: 
+        print("Processed {}/{} [{}%]".format(i, num_vars, round(i/num_vars*100)))
 
 n_1_all = [e[0] for e in min_sample_sizes]
 n_2_all = [e[1] for e in min_sample_sizes]
 
 # create the plot
-plt.plot(param_vals[x_var], n_1_all, label='Condition 1')
-plt.plot(param_vals[x_var], n_2_all, label='Condition 2')
+plt.figure(figsize=(7, 7))
+plt.plot(param_vals[x_var], n_1_all, label='Condition 1', marker='o')
+plt.plot(param_vals[x_var], n_2_all, label='Condition 2', marker='o')
+plt.grid()
+plt.title("Test of", param_vals['test_of'])
 plt.xlabel(x_var)
 plt.ylabel('Minimum number of samples')
 plt.legend(loc='upper left')
 plt.show()
-
-
