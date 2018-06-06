@@ -4,6 +4,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
+
 def get_input():
     """Returns a dict that stores parameter values based on input taken from the user."""
     prompt_param = """
@@ -162,35 +163,35 @@ def format_inputs_dict(x_var, param_vals):
 
 #  ------------------------------------------------------------------------
 # Main code:
+if __name__ == '__main__':
+    param_vals = get_input()
 
-param_vals = get_input()
+    # identify the parameter that goes on the x-axis of the sample size plot
+    x_var = str([var for var in ['alpha', 'power', 'delta'] if len(param_vals[var]) > 1][0])
 
-# identify the parameter that goes on the x-axis of the sample size plot
-x_var = str([var for var in ['alpha', 'power', 'delta'] if len(param_vals[var]) > 1][0])
+    param_vals = format_inputs_dict(x_var, param_vals)   # reformat param_vals
+    min_sample_sizes = []
 
-param_vals = format_inputs_dict(x_var, param_vals)   # reformat param_vals
-min_sample_sizes = []
+    print("Calculating minimum required sample size...")
+    num_vars = len(param_vals[x_var])
+    for i in range(num_vars):
+        inputs = {var:param_vals[var][i] for var in param_vals}
+        n_1, n_2 = get_sample_size(**inputs)
+        min_sample_sizes.append((n_1, n_2))
+        if (i % 10 == 0 or i == num_vars-1) and i != 0:
+            print("Processed {}/{} [{}%]".format(i, num_vars, round(i/num_vars*100)))
 
-print("Calculating minimum required sample size...")
-num_vars = len(param_vals[x_var])
-for i in range(num_vars):
-    inputs = {var:param_vals[var][i] for var in param_vals}
-    n_1, n_2 = get_sample_size(**inputs)
-    min_sample_sizes.append((n_1, n_2))
-    if (i % 10 == 0 or i == num_vars-1) and i != 0: 
-        print("Processed {}/{} [{}%]".format(i, num_vars, round(i/num_vars*100)))
+    n_1_all = [e[0] for e in min_sample_sizes]
+    n_2_all = [e[1] for e in min_sample_sizes]
 
-n_1_all = [e[0] for e in min_sample_sizes]
-n_2_all = [e[1] for e in min_sample_sizes]
-
-# create the plot
-print('Sample size calculation completed.  Please see the generated plot.')
-plt.figure(figsize=(7, 7))
-plt.plot(param_vals[x_var], n_1_all, label='Condition 1', marker='o')
-plt.plot(param_vals[x_var], n_2_all, label='Condition 2', marker='o')
-plt.grid()
-plt.title("Test of {}".format(param_vals['test_of'][0]))
-plt.xlabel(x_var)
-plt.ylabel('Minimum number of samples')
-plt.legend(loc='upper left')
-plt.show()
+    # create the plot
+    print('Sample size calculation completed.  Please see the generated plot.')
+    plt.figure(figsize=(7, 7))
+    plt.plot(param_vals[x_var], n_1_all, label='Condition 1', marker='o')
+    plt.plot(param_vals[x_var], n_2_all, label='Condition 2', marker='o')
+    plt.grid()
+    plt.title("Test of {}".format(param_vals['test_of'][0]))
+    plt.xlabel(x_var)
+    plt.ylabel('Minimum number of samples')
+    plt.legend(loc='upper left')
+    plt.show()
