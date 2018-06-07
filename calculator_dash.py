@@ -258,7 +258,7 @@ def display_content(value):
              html.Div(['Probability:',
                        html.Span(
                            'The probability that a unit in condition 1 performs the action of interest',
-                           className='tooltiptext', style={'right': '93px'})],
+                           className='tooltiptext')],
                       style={'margin-top': 5}, className='tooltip'),
              dcc.Input(id='prob', value=0.5, type='text', style={'width': 80}),
              html.Div(html.Label('Type:'), style={'margin-top': 5}),
@@ -298,7 +298,7 @@ def display_content(value):
              html.Div(['Probability:',
                        html.Span(
                            'The probability that a unit in condition 1 performs the action of interest',
-                           className='tooltiptext', style={'right': '93px'})],
+                           className='tooltiptext')],
              style={'margin-top': 5},
              className='tooltip'),
              dcc.Input(id='prob', value=0.5, type='text', style={'width': 80}),
@@ -345,8 +345,7 @@ def display_content(value):
                 html.Div(['Probability:',
                           html.Span(
                               'The probability that a unit in condition 1 performs the action of interest',
-                              className='tooltiptext',
-                              style={'right': '93px'})],
+                              className='tooltiptext')],
                          style={'margin-top': 5},
                          className='tooltip'),
                 dcc.Input(id='prob', value=0.5, type='text',
